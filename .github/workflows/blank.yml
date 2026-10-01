@@ -1,0 +1,61 @@
+# This
+name: Windows Virtual PC
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - name: Preparar Windows
+        shell: powershell
+        run: |
+          Write-Host "Windows virtual iniciado"
+          systeminfo
+
+      - name: Instalar QEMU
+        shell: powershell
+        run: |
+          winget install --id SoftwareFreedomConservancy.QEMU -e --silent --accept-package-agreements --accept-source-agreements
+
+      - name: Criar estrutura
+        shell: powershell
+        run: |
+          New-Item -ItemType Directory -Force -Path "$env:GITHUB_WORKSPACE\VM"
+          New-Item -ItemType Directory -Force -Path "$env:GITHUB_WORKSPACE\VM\Build"
+
+      - name: Criar disco virtual de 128 GB
+        shell: powershell
+        run: |
+          qemu-img create -f qcow2 "$env:GITHUB_WORKSPACE\VM\windows.qcow2" 128G
+
+      - name: Criar configuração
+        shell: powershell
+        run: |
+          @"
+          ==========================================
+                    WINDOWS VIRTUAL PC
+          ==========================================
+
+          Sistema: Windows
+          CPU: 4 núcleos
+          RAM: 8 GB
+          Armazenamento: 128 GB
+          Disco: QCOW2
+          Virtualizador: QEMU
+          ==========================================
+          "@ | Out-File "$env:GITHUB_WORKSPACE\VM\Build\BUILD.txt"
+
+      - name: Mostrar build
+        shell: powershell
+        run: |
+          Get-Content "$env:GITHUB_WORKSPACE\VM\Build\BUILD.txt"
+          qemu-img info "$env:GITHUB_WORKSPACE\VM\windows.qcow2"
+
+      - name: Publicar PC virtual
+        uses: actions/upload-artifact@v4
+        with:
+          name: Windows-Virtual-PC
+          path: VM/
